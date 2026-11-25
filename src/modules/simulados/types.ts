@@ -6,6 +6,8 @@ export type Aluno = {
   pts?: Record<number, number | string>;
 };
 
+export type SimPeriodo = 'diurno' | 'noturno';
+
 export type Simulado = {
   id: string;
   nome: string;
@@ -15,6 +17,8 @@ export type Simulado = {
   gab: string;
   anul: number[];
   alunos: Aluno[];
+  /** Turma do simulado (diurno / noturno) */
+  periodo?: SimPeriodo;
   criado?: number;
   disc?: number[];
   peso?: (number | null | string)[];

@@ -1,7 +1,12 @@
 import * as XLSX from 'xlsx';
+import { periodoLabel } from '../../lib/storage';
 import { fmtN, isDisc, peso, score, temPts } from './score';
 import type { Aluno, Simulado } from './types';
 import { fmt } from './utils';
+
+export function turmaLabel(sim: Simulado): string {
+  return periodoLabel(sim.periodo) || '—';
+}
 
 export function alunoResultText(
   sim: Simulado,
@@ -12,6 +17,7 @@ export function alunoResultText(
   const lines = [
     'Sistema de Avaliações UNIRP',
     `Simulado: ${sim.nome}`,
+    `Turma: ${turmaLabel(sim)}`,
     ...(prof ? [`Professor: ${prof}`] : []),
     `Aluno: ${aluno.nome.trim() || 'Sem nome'}`,
     `Nota: ${fmt(s.nota)} / ${fmt(sim.max)}`,
@@ -61,8 +67,9 @@ export function tabelaRowsSim(sim: Simulado): string[][] {
     .map((a) => ({ a, s: score(sim, a.resp, a.pts) }))
     .sort((x, y) => y.s.nota - x.s.nota || x.a.nome.localeCompare(y.a.nome, 'pt-BR'));
 
+  const turma = turmaLabel(sim);
   const head = [
-    'Posição',
+    'Turma',
     'Aluno',
     'Acertos objetivas',
     'Objetivas válidas',
@@ -99,8 +106,8 @@ export function tabelaRowsSim(sim: Simulado): string[][] {
     ...Array.from({ length: sim.nq }, (_, i) => fmtN(peso(sim, i))),
   ];
 
-  const rows = ranked.map((r, k) => [
-    String(k + 1),
+  const rows = ranked.map((r) => [
+    turma,
     r.a.nome.trim() || 'Sem nome',
     String(r.s.ac),
     String(r.s.val),

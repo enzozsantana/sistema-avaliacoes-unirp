@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SimuladosHomeSkeleton } from '../../../components/Skeleton';
+import { periodoLabel } from '../../../lib/storage';
+import { PeriodoSeg } from '../components/PeriodoSeg';
 import { pad, score } from '../score';
 import { openSimTab, useSimulados } from '../SimuladosContext';
-import type { Simulado } from '../types';
+import type { SimPeriodo, Simulado } from '../types';
 import { LETTERS, fmt } from '../utils';
 
 type EditDraft = {
@@ -12,15 +14,18 @@ type EditDraft = {
   nq: string;
   na: string;
   max: string;
+  periodo: SimPeriodo | '';
 };
 
 export function HomePage() {
-  const { sims, loading, createSim, mutateSim, removeSim, setTab, setAluno, setLancar } = useSimulados();
+  const { sims, loading, createSim, mutateSim, removeSim, setTab, setAluno, setLancar, flashStatus } =
+    useSimulados();
   const nav = useNavigate();
   const [nNome, setNNome] = useState('');
   const [nQ, setNQ] = useState('20');
   const [nA, setNA] = useState('5');
   const [nM, setNM] = useState('10');
+  const [nPeriodo, setNPeriodo] = useState<SimPeriodo | ''>('');
   const [edit, setEdit] = useState<EditDraft | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -29,12 +34,17 @@ export function HomePage() {
   const list = sims.slice().sort((a, b) => (b.criado || 0) - (a.criado || 0));
 
   const criar = () => {
+    if (nPeriodo !== 'diurno' && nPeriodo !== 'noturno') {
+      flashStatus('Selecione a turma (diurno ou noturno)');
+      return;
+    }
     const nq = Math.min(200, Math.max(1, parseInt(nQ, 10) || 20));
     const sim = createSim({
       nome: nNome,
       nq,
       na: parseInt(nA, 10),
       max: Math.max(1, parseFloat(String(nM).replace(',', '.')) || 10),
+      periodo: nPeriodo,
     });
     setTab('gabarito');
     setAluno(null);
@@ -60,16 +70,22 @@ export function HomePage() {
       nq: String(s.nq),
       na: String(s.na),
       max: String(s.max),
+      periodo: s.periodo || '',
     });
   };
 
   const applyEdit = () => {
     if (!edit) return;
+    if (edit.periodo !== 'diurno' && edit.periodo !== 'noturno') {
+      flashStatus('Selecione a turma (diurno ou noturno)');
+      return;
+    }
     const nq = Math.min(200, Math.max(1, parseInt(edit.nq, 10) || 20));
     mutateSim(edit.id, (s) => {
       s.nome = edit.nome.trim() || s.nome;
       s.na = parseInt(edit.na, 10) || s.na;
       s.max = Math.max(1, parseFloat(String(edit.max).replace(',', '.')) || s.max);
+      s.periodo = edit.periodo as SimPeriodo;
       s.nq = nq;
       s.gab = pad(s.gab, nq);
       s.anul = s.anul.filter((i) => i < nq);
@@ -158,6 +174,7 @@ export function HomePage() {
             />
           </div>
         </div>
+        <PeriodoSeg id="nPeriodo" value={nPeriodo} onChange={setNPeriodo} />
         <div className="actions" style={{ marginTop: 4 }}>
           <button type="button" className="btn" onClick={criar}>
             Criar simulado
@@ -178,7 +195,7 @@ export function HomePage() {
                     <span>
                       <strong>{s.nome}</strong>
                       <span className="small muted">
-                        {s.nq} questões, {s.alunos.length}{' '}
+                        {periodoLabel(s.periodo)} · {s.nq} questões, {s.alunos.length}{' '}
                         {s.alunos.length === 1 ? 'prova corrigida' : 'provas corrigidas'}
                       </span>
                     </span>
@@ -259,6 +276,11 @@ export function HomePage() {
                         />
                       </div>
                     </div>
+                    <PeriodoSeg
+                      id={`ePeriodo-${s.id}`}
+                      value={edit.periodo}
+                      onChange={(p) => setEdit({ ...edit, periodo: p })}
+                    />
                     <div className="actions" style={{ marginTop: 0 }}>
                       <button type="button" className="btn ghost" onClick={() => setEdit(null)}>
                         Cancelar

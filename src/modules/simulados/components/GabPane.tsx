@@ -13,9 +13,10 @@ import {
   seqTxt,
 } from '../score';
 import { useSimulados } from '../SimuladosContext';
-import type { Simulado } from '../types';
+import type { SimPeriodo, Simulado } from '../types';
 import { LETTERS } from '../utils';
 import { Bubbles } from './Bubbles';
+import { PeriodoSeg } from './PeriodoSeg';
 
 function espHTML(sim: Simulado, i: number) {
   const t = sim.esp?.[i];
@@ -144,13 +145,19 @@ export function GabPane({ sim }: { sim: Simulado }) {
   const [eQ, setEQ] = useState(String(sim.nq));
   const [eA, setEA] = useState(String(sim.na));
   const [eM, setEM] = useState(String(sim.max));
+  const [ePeriodo, setEPeriodo] = useState<SimPeriodo | ''>(sim.periodo || '');
 
   const applyEdit = () => {
+    if (ePeriodo !== 'diurno' && ePeriodo !== 'noturno') {
+      alert('Selecione a turma (diurno ou noturno)');
+      return;
+    }
     const nq = Math.min(200, Math.max(1, parseInt(eQ, 10) || sim.nq));
     mutateSim(sim.id, (s) => {
       s.nome = eNome.trim() || s.nome;
       s.na = parseInt(eA, 10);
       s.max = Math.max(1, parseFloat(String(eM).replace(',', '.')) || s.max);
+      s.periodo = ePeriodo;
       s.nq = nq;
       s.gab = pad(s.gab, nq);
       s.anul = s.anul.filter((i) => i < nq);
@@ -345,6 +352,7 @@ export function GabPane({ sim }: { sim: Simulado }) {
               <input type="number" id="eM" min={1} value={eM} onChange={(e) => setEM(e.target.value)} />
             </div>
           </div>
+          <PeriodoSeg id="ePeriodo" value={ePeriodo} onChange={setEPeriodo} />
           <div className="actions">
             <button type="button" className="btn danger" onClick={() => void delSim()}>
               Excluir simulado

@@ -12,7 +12,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import { folhaPDF } from './folhaPdf';
 import { lerFotos, pickFiles } from './omr/image';
 import { listSimulados, removeSimulado, saveSimulado } from './store';
-import type { AlunoPreview, SimTab, Simulado } from './types';
+import type { AlunoPreview, SimPeriodo, SimTab, Simulado } from './types';
 import { defaultSimulado } from './utils';
 import { gabFaltando } from './score';
 
@@ -31,7 +31,13 @@ type SimuladosCtx = {
   cur: (id: string) => Simulado | undefined;
   updateSim: (id: string, fn: (s: Simulado) => void) => void;
   mutateSim: (id: string, fn: (s: Simulado) => void) => void;
-  createSim: (partial: { nome: string; nq: number; na: number; max: number }) => Simulado;
+  createSim: (partial: {
+    nome: string;
+    nq: number;
+    na: number;
+    max: number;
+    periodo: SimPeriodo;
+  }) => Simulado;
   removeSim: (id: string) => Promise<void>;
   persist: (sim: Simulado) => void;
   tab: SimTab;
@@ -202,13 +208,14 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
   const cur = useCallback((id: string) => sims.find((s) => s.id === id), [sims]);
 
   const createSim = useCallback(
-    (partial: { nome: string; nq: number; na: number; max: number }) => {
+    (partial: { nome: string; nq: number; na: number; max: number; periodo: SimPeriodo }) => {
       const sim = defaultSimulado({
         id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
         nome: partial.nome.trim() || 'Simulado sem nome',
         nq: partial.nq,
         na: partial.na,
         max: partial.max,
+        periodo: partial.periodo,
         gab: '.'.repeat(partial.nq),
         criado: Date.now(),
       });

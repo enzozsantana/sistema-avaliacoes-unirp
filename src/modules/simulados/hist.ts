@@ -1,6 +1,7 @@
+import { periodoLabel } from '../../lib/storage';
 import { alunosComProva } from './export';
 import { score } from './score';
-import type { Simulado } from './types';
+import type { SimPeriodo, Simulado } from './types';
 import { fmt } from './utils';
 
 export type SimHistItem = {
@@ -10,6 +11,7 @@ export type SimHistItem = {
   alunoId: string;
   nome: string;
   simNome: string;
+  periodo?: SimPeriodo;
   nota: number;
   max: number;
   ac: number;
@@ -29,6 +31,7 @@ export function simHistItems(sims: Simulado[]): SimHistItem[] {
         alunoId: a.id,
         nome: a.nome.trim() || 'Sem nome',
         simNome: sim.nome,
+        periodo: sim.periodo,
         nota: s.nota,
         max: sim.max,
         ac: s.ac,
@@ -41,13 +44,14 @@ export function simHistItems(sims: Simulado[]): SimHistItem[] {
 }
 
 export function tabelaRowsSimHist(items: SimHistItem[]): string[][] {
-  const head = ['Data', 'Tipo', 'Simulado', 'Aluno', 'Acertos objetivas', 'Nota', 'Nota máxima'];
+  const head = ['Data', 'Tipo', 'Simulado', 'Turma', 'Aluno', 'Acertos objetivas', 'Nota', 'Nota máxima'];
   const rows = items.map((r) => [
     r.data
       ? new Date(r.data).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
       : '',
     'Simulado',
     r.simNome,
+    periodoLabel(r.periodo) || '—',
     r.nome,
     `${r.ac} de ${r.val}`,
     fmt(r.nota),

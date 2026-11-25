@@ -67,7 +67,6 @@ export function ResPane({ sim }: { sim: Simulado }) {
     try {
       const blob = buildSimXlsxBlob(sim);
       await downloadBlob({ filename, data: blob });
-      flashStatus('Planilha .xlsx baixada');
     } catch (e) {
       console.error(e);
       flashStatus('Não foi possível gerar o arquivo .xlsx');

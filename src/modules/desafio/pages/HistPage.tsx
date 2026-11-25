@@ -81,6 +81,7 @@ export function HistPage() {
       if (q && !r.nome.toLowerCase().includes(q) && !r.simNome.toLowerCase().includes(q)) {
         return false;
       }
+      if (filtro.periodo && r.periodo !== filtro.periodo) return false;
       if (!histNoIntervalo(r.data || 0, filtro)) return false;
       return true;
     });
@@ -94,8 +95,8 @@ export function HistPage() {
       }
     }
     if (tipo !== 'desafio') {
-      // estação / crítico / período só se aplicam ao desafio
-      const desafioOnlyFilters = !!(filtro.st || filtro.crit || filtro.periodo);
+      // estação / erro crítico só se aplicam ao desafio
+      const desafioOnlyFilters = !!(filtro.st || filtro.crit);
       if (!desafioOnlyFilters || tipo === 'simulado') {
         for (const item of simList) {
           items.push({ kind: 'simulado', sort: item.data || 0, item });
@@ -103,7 +104,7 @@ export function HistPage() {
       }
     }
     return items.sort((a, b) => b.sort - a.sort);
-  }, [tipo, desafioList, simList, filtro.st, filtro.crit, filtro.periodo]);
+  }, [tipo, desafioList, simList, filtro.st, filtro.crit]);
 
   const pages = Math.max(1, Math.ceil(feed.length / HIST_PER_PAGE));
   const safePage = Math.min(Math.max(1, page), pages);
@@ -195,7 +196,7 @@ export function HistPage() {
     const includeSim =
       tipo !== 'desafio' &&
       simList.length > 0 &&
-      (!(filtro.st || filtro.crit || filtro.periodo) || tipo === 'simulado');
+      (!(filtro.st || filtro.crit) || tipo === 'simulado');
 
     if (includeDesafio) {
       const rows = tabelaRows(hist, filtro);
@@ -215,6 +216,7 @@ export function HistPage() {
         { wch: 18 },
         { wch: 12 },
         { wch: 28 },
+        { wch: 12 },
         { wch: 22 },
         { wch: 16 },
         { wch: 10 },
@@ -254,7 +256,6 @@ export function HistPage() {
       a.click();
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-      toast('Planilha .xlsx baixada');
     } catch (e) {
       console.error(e);
       toast('Não foi possível gerar o arquivo .xlsx');
@@ -518,7 +519,9 @@ export function HistPage() {
                         <strong>{s.nome}</strong>
                         <span className="badge soft">Simulado</span>
                       </div>
-                      <span className="meta">{s.simNome}</span>
+                      <span className="meta">
+                        {s.simNome} · Turma {periodoLabel(s.periodo)}
+                      </span>
                       <span className="meta">
                         {s.ac} de {s.val} acertos
                         {s.data
