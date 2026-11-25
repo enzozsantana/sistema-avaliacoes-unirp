@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
+import { PageSkeleton } from './components/Skeleton';
 import { AppLayout } from './layout/AppLayout';
 import { DesafioLayout, desafioChildRoutes } from './modules/desafio/DesafioRoutes';
 import { SimuladosRoutes } from './modules/simulados/SimuladosRoutes';
@@ -10,7 +11,7 @@ import { ThemeProvider } from './theme/ThemeProvider';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, ready } = useAuth();
-  if (!ready) return <div className="empty">Carregando…</div>;
+  if (!ready) return <PageSkeleton />;
   if (!user) return <Navigate to="/login" replace />;
   return children;
 }

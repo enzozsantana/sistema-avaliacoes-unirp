@@ -35,7 +35,7 @@ function PeriodoSeg({
 export function StartPage() {
   const nav = useNavigate();
   const { user, meProf } = useAuth();
-  const { used, markUsed, clearUsed, evalActive, toast } = useDesafio();
+  const { used, markUsed, clearUsed, evalActive, toast, confirm } = useDesafio();
   const [nome, setNome] = useState('');
   const [ra, setRa] = useState('');
   const [periodo, setPeriodo] = useState<'diurno' | 'noturno' | ''>('');
@@ -66,6 +66,22 @@ export function StartPage() {
     document.body.classList.add('has-dock');
     return () => document.body.classList.remove('has-dock');
   }, []);
+
+  async function onClearCache() {
+    if (
+      !(await confirm(
+        'Reiniciar apenas o sorteio local deste aparelho? As avaliações salvas na nuvem não serão apagadas.',
+        { title: 'Reiniciar sorteio', danger: true },
+      ))
+    ) {
+      return;
+    }
+    clearUsed();
+    setChosen(null);
+    setDrumNum('?');
+    setDrumNm('Toque em sortear');
+    toast('Sorteio reiniciado');
+  }
 
   function sortear() {
     let pool = ST.map((s) => s.n).filter((n) => !used.includes(n));
@@ -177,6 +193,27 @@ export function StartPage() {
                 E{s.n}
               </span>
             ))}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className="toolbtn"
+              style={{
+                width: '100%',
+                fontSize: 13,
+                padding: '8px 12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                opacity: used.length === 0 ? 0.6 : 1,
+              }}
+              disabled={used.length === 0}
+              onClick={() => void onClearCache()}
+              title="Libera novamente todas as 7 estações no sorteio local deste dispositivo"
+            >
+              <span>↺</span> Limpar cache do sorteio {used.length > 0 ? `(${used.length}/7 sorteadas)` : ''}
+            </button>
           </div>
           <details style={{ marginTop: 14 }}>
             <summary>Escolher manualmente</summary>

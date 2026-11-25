@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SimuladosHomeSkeleton } from '../../../components/Skeleton';
 import { pad, score } from '../score';
 import { openSimTab, useSimulados } from '../SimuladosContext';
 import type { Simulado } from '../types';
@@ -23,7 +24,7 @@ export function HomePage() {
   const [edit, setEdit] = useState<EditDraft | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  if (loading) return <p className="muted">Carregando seus simulados…</p>;
+  if (loading) return <SimuladosHomeSkeleton />;
 
   const list = sims.slice().sort((a, b) => (b.criado || 0) - (a.criado || 0));
 

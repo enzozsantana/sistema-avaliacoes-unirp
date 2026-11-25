@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
+import { SimPageSkeleton } from '../../../components/Skeleton';
 import { AlunoPane } from '../components/AlunoPane';
 import { GabPane } from '../components/GabPane';
 import { LancarPane } from '../components/LancarPane';
@@ -32,7 +33,7 @@ export function SimPage() {
   }, [tab, aluno, lancar, setOpenQ]);
 
   if (!id) return <Navigate to="/simulados" replace />;
-  if (loading) return <p className="muted">Carregando simulado…</p>;
+  if (loading) return <SimPageSkeleton />;
   if (!sim) return <Navigate to="/simulados" replace />;
 
   const backTo = state.fromHist ? '/desafio/historico' : '/simulados';

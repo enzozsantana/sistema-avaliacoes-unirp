@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import { HubSkeleton } from '../components/Skeleton';
 import { firstName, fmt, periodoLabel } from '../lib/storage';
 import { sb } from '../lib/supabase';
 import { mapAvaliacao, type AvaliacaoRec } from '../modules/desafio/types';
@@ -16,22 +17,30 @@ export function HubPage() {
   const nav = useNavigate();
   const [hist, setHist] = useState<AvaliacaoRec[]>([]);
   const [simItems, setSimItems] = useState<SimHistItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     void (async () => {
-      const [{ data }, sims] = await Promise.all([
-        sb
-          .from('avaliacoes')
-          .select('*,professores(nome_completo)')
-          .eq('professor_id', user.id)
-          .order('created_at', { ascending: false }),
-        listSimulados().catch(() => [] as Awaited<ReturnType<typeof listSimulados>>),
-      ]);
-      setHist((data || []).map((row) => mapAvaliacao(row as Parameters<typeof mapAvaliacao>[0])));
-      setSimItems(simHistItems(sims));
+      setLoading(true);
+      try {
+        const [{ data }, sims] = await Promise.all([
+          sb
+            .from('avaliacoes')
+            .select('*,professores(nome_completo)')
+            .eq('professor_id', user.id)
+            .order('created_at', { ascending: false }),
+          listSimulados().catch(() => [] as Awaited<ReturnType<typeof listSimulados>>),
+        ]);
+        setHist((data || []).map((row) => mapAvaliacao(row as Parameters<typeof mapAvaliacao>[0])));
+        setSimItems(simHistItems(sims));
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [user]);
+
+  if (loading) return <HubSkeleton />;
 
   const recent: RecentItem[] = [
     ...hist.map((rec) => ({

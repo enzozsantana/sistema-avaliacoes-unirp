@@ -342,17 +342,18 @@ body.is-auth .wrap {
   gap: 4px;
 }
 
-@media (min-width: 720px) {
+@media (min-width: 840px) {
   .top-nav {
     display: flex;
-    margin-right: auto;
+    gap: 6px;
+    margin-left: 8px;
   }
   .btn-menu {
     display: none !important;
   }
   .brand {
-    flex: 0 1 auto;
-    max-width: 280px;
+    flex: 0 0 auto;
+    max-width: none;
   }
 }
 @media (max-width: 520px) {
@@ -365,12 +366,17 @@ body.is-auth .wrap {
     max-width: none;
   }
 }
-@media (max-width: 380px) {
+@media (max-width: 480px) {
   .brand-text span {
     display: none;
   }
+}
+@media (max-width: 380px) {
   .brand-logo {
-    height: 34px;
+    height: 32px;
+  }
+  .brand-text strong {
+    font-size: 13px;
   }
 }
 
@@ -398,7 +404,8 @@ body.is-auth .wrap {
   align-items: center;
   gap: 12px;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+  max-width: none;
   background: none;
   border: 0;
   padding: 0;
@@ -420,6 +427,7 @@ body.is-auth .wrap {
   gap: 1px;
   border-left: 1px solid var(--line);
   padding-left: 12px;
+  flex: 0 0 auto;
 }
 .brand-text strong {
   font-family: var(--font-ui);
@@ -428,8 +436,6 @@ body.is-auth .wrap {
   color: var(--ink);
   line-height: 1.2;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .brand-text span {
   font-family: var(--font-body);
@@ -439,8 +445,6 @@ body.is-auth .wrap {
   letter-spacing: 0.02em;
   text-transform: uppercase;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .top-actions {
   display: flex;

@@ -30,6 +30,8 @@ export function AppLayout() {
   const fileRef = useRef<HTMLInputElement>(null);
   const isAuth = loc.pathname === '/login';
   const inEval = loc.pathname.startsWith('/desafio/avaliar');
+  const isDesafioActive =
+    loc.pathname.startsWith('/desafio') && !loc.pathname.startsWith('/desafio/historico');
   const nome = meProf?.nome_completo || 'Professor';
   const avatar = meProf?.avatar_url || '';
 
@@ -55,6 +57,14 @@ export function AppLayout() {
       return;
     }
     nav('/');
+  }
+
+  function goDesafio() {
+    if (inEval) {
+      setToast('Finalize ou cancele a avaliação primeiro');
+      return;
+    }
+    nav('/desafio');
   }
 
   function goHist() {
@@ -135,10 +145,10 @@ export function AppLayout() {
             </button>
             <button
               type="button"
-              className={`nav-link${loc.pathname.startsWith('/desafio/historico') ? ' is-active' : ''}`}
-              onClick={goHist}
+              className={`nav-link${isDesafioActive ? ' is-active' : ''}`}
+              onClick={goDesafio}
             >
-              Histórico
+              Desafio Clínico
             </button>
             <button
               type="button"
@@ -146,6 +156,13 @@ export function AppLayout() {
               onClick={goSimulados}
             >
               Simulados
+            </button>
+            <button
+              type="button"
+              className={`nav-link${loc.pathname.startsWith('/desafio/historico') ? ' is-active' : ''}`}
+              onClick={goHist}
+            >
+              Histórico
             </button>
           </nav>
           <div className="top-actions">
@@ -221,10 +238,13 @@ export function AppLayout() {
               </button>
               <button
                 type="button"
-                className={`nav-link${loc.pathname.startsWith('/desafio/historico') ? ' is-active' : ''}`}
-                onClick={goHist}
+                className={`nav-link${isDesafioActive ? ' is-active' : ''}`}
+                onClick={() => {
+                  setDrawer(false);
+                  goDesafio();
+                }}
               >
-                Histórico
+                Desafio Clínico
               </button>
               <button
                 type="button"
@@ -235,6 +255,13 @@ export function AppLayout() {
                 }}
               >
                 Simulados
+              </button>
+              <button
+                type="button"
+                className={`nav-link${loc.pathname.startsWith('/desafio/historico') ? ' is-active' : ''}`}
+                onClick={goHist}
+              >
+                Histórico
               </button>
             </nav>
             <div className="drawer-foot">

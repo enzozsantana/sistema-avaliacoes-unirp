@@ -51,6 +51,9 @@
   --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.14);
   --touch: 44px;
 
+  --skel-base: #e6e8eb;
+  --skel-highlight: #f4f6f8;
+
   --content-max: 1040px;
   --sim-max: 1040px;
 
@@ -80,6 +83,8 @@
     --onaccent: #ffffff;
     --red: #ff3b3b;
     --red-soft: #3a1515;
+    --skel-base: #282828;
+    --skel-highlight: #363636;
     color-scheme: dark;
   }
   :root:not([data-theme='light']) .brand-logo,
@@ -107,6 +112,8 @@
   --onaccent: #ffffff;
   --red: #ff3b3b;
   --red-soft: #3a1515;
+  --skel-base: #282828;
+  --skel-highlight: #363636;
   color-scheme: dark;
 }
 :root[data-theme='dark'] .brand-logo,

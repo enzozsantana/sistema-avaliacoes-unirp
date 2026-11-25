@@ -1,13 +1,287 @@
 /* OSCE / Desafio Clínico — domínio */
 
 .filters {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Busca rápida */
+.filters-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.filters-search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filters-search-input {
+  width: 100%;
+  padding-left: 42px !important;
+  padding-right: 38px !important;
+  font-size: 14px;
+  min-height: 44px;
+  border-radius: var(--radius);
+  background: var(--surface2) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink);
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.filters-search-input:focus {
+  background: var(--surface) !important;
+  border-color: var(--red) !important;
+}
+
+.filters-search-clear {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  line-height: 1;
+  font-size: 13px;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.filters-search-clear:hover {
+  color: var(--ink);
+  background: var(--line);
+}
+
+/* Barra de controle: Tipo + Status de filtros ativos */
+.filters-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 2px;
+}
+
+.filters-segmented-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filters-segmented-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+
+.filters-segmented {
+  display: inline-flex;
+  background: var(--surface2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 3px;
+  gap: 3px;
+}
+
+.filters-segmented-btn {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.filters-segmented-btn:hover {
+  color: var(--ink);
+}
+
+.filters-segmented-btn.active {
+  background: var(--red);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.filters-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.filters-active-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
+  background: var(--red-soft);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filters-reset-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filters-reset-btn:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+/* Grid principal de campos */
+.filters-grid {
   display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
-.filters .row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+
+@media (max-width: 960px) {
+  .filters-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .filters-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .filters-status-wrap {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+  .filters-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .filters-field.full-mobile {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 440px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+  .filters-field.full-mobile {
+    grid-column: span 1;
+  }
+}
+
+.filters-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.filters-field label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filters-field select,
+.filters-field input {
+  height: 42px;
+  min-height: 42px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: var(--radius);
+  background-color: var(--surface2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+
+.filters-field select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-position: calc(100% - 12px) center;
+  background-size: 16px 16px;
+  background-repeat: no-repeat;
+}
+
+:root[data-theme='dark'] .filters-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b0b0b0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .filters-field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b0b0b0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  }
+}
+
+.filters-field select:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+.filters-field select:focus,
+.filters-field input:focus {
+  background-color: var(--surface);
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-soft);
+}
+
+.filters-field select:disabled,
+.filters-field input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: var(--surface);
+  border-color: var(--line);
+}
+
+.filters-hint {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  margin: 0;
 }
 .periodo-seg {
   display: grid;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../../auth/AuthProvider';
+import { HistSkeleton } from '../../../components/Skeleton';
 import { fmt, periodoLabel } from '../../../lib/storage';
 import { sb } from '../../../lib/supabase';
 import { simHistItems, tabelaRowsSimHist, type SimHistItem } from '../../simulados/hist';
@@ -19,6 +20,16 @@ import {
 
 type TipoFiltro = '' | 'desafio' | 'simulado';
 
+const STATION_LABELS: Record<number, string> = {
+  1: 'E1: Adm. Intramuscular',
+  2: 'E2: Punção Venosa (Abocath)',
+  3: 'E3: Punção / Scalp',
+  4: 'E4: Sondagem Nasoenteral (SNE)',
+  5: 'E5: Sonda Vesical Alívio (SVA)',
+  6: 'E6: Sonda Vesical Demora (SVD)',
+  7: 'E7: Aspiração Traqueostomia',
+};
+
 type FeedItem =
   | { kind: 'desafio'; sort: number; rec: AvaliacaoRec }
   | { kind: 'simulado'; sort: number; item: SimHistItem };
@@ -29,7 +40,6 @@ export function HistPage() {
   const {
     hist,
     fetchHist,
-    clearUsed,
     toast,
     confirm,
     removeHistById,
@@ -109,6 +119,30 @@ export function HistPage() {
     tipo
   );
 
+  const activeFiltersCount = useMemo(() => {
+    let c = 0;
+    if (filtro.q.trim()) c++;
+    if (tipo) c++;
+    if (filtro.st) c++;
+    if (filtro.crit) c++;
+    if (filtro.periodo) c++;
+    if (filtro.de) c++;
+    if (filtro.ate) c++;
+    return c;
+  }, [filtro, tipo]);
+
+  function clearFilters() {
+    setFiltro({ q: '', st: '', crit: '', periodo: '', de: '', ate: '' });
+    setTipo('');
+  }
+
+  function handleTipoChange(t: TipoFiltro) {
+    setTipo(t);
+    if (t === 'simulado') {
+      setFiltro((f) => ({ ...f, st: '', crit: '', periodo: '' }));
+    }
+  }
+
   useEffect(() => {
     setPage(1);
   }, [filtro.q, filtro.st, filtro.crit, filtro.periodo, filtro.de, filtro.ate, tipo]);
@@ -153,19 +187,6 @@ export function HistPage() {
       console.error(e);
       toast(e instanceof Error ? e.message : 'Não foi possível excluir');
     }
-  }
-
-  async function onClearCache() {
-    if (
-      !(await confirm(
-        'Reiniciar apenas o sorteio local deste aparelho? As avaliações na nuvem não serão apagadas.',
-        { title: 'Reiniciar sorteio', danger: true },
-      ))
-    ) {
-      return;
-    }
-    clearUsed();
-    toast('Sorteio reiniciado');
   }
 
   function buildXlsxBlob(): Blob {
@@ -260,72 +281,138 @@ export function HistPage() {
           <p className="lead">{lead}</p>
         </div>
         <div className="card filters">
-          <label className="f" htmlFor="inFiltro">
-            Buscar aluno, RA ou simulado
-          </label>
-          <input
-            id="inFiltro"
-            autoComplete="off"
-            placeholder="Nome, RA ou simulado"
-            value={filtro.q}
-            onChange={(e) => setFiltro((f) => ({ ...f, q: e.target.value }))}
-          />
-          <div className="row">
-            <div>
-              <label className="f" htmlFor="inFiltroTipo">
-                Tipo
-              </label>
-              <select
-                id="inFiltroTipo"
-                value={tipo}
-                onChange={(e) => setTipo(e.target.value as TipoFiltro)}
+          {/* Campo de busca principal com ícone e botão de limpeza rápida */}
+          <div className="filters-search-wrap">
+            <span className="filters-search-icon" aria-hidden="true">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <option value="">Todos</option>
-                <option value="desafio">Estações</option>
-                <option value="simulado">Simulados</option>
-              </select>
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
+            <input
+              id="inFiltro"
+              className="filters-search-input"
+              autoComplete="off"
+              placeholder="Buscar aluno por nome, RA ou simulado..."
+              value={filtro.q}
+              onChange={(e) => setFiltro((f) => ({ ...f, q: e.target.value }))}
+            />
+            {filtro.q ? (
+              <button
+                type="button"
+                className="filters-search-clear"
+                onClick={() => setFiltro((f) => ({ ...f, q: '' }))}
+                aria-label="Limpar texto da busca"
+                title="Limpar busca"
+              >
+                ✕
+              </button>
+            ) : null}
+          </div>
+
+          {/* Barra de controle: Tipo de avaliação em abas segmentadas + contador e reset */}
+          <div className="filters-toolbar">
+            <div className="filters-segmented-group">
+              <span className="filters-segmented-label">Tipo:</span>
+              <div className="filters-segmented" role="radiogroup" aria-label="Filtrar por tipo de avaliação">
+                <button
+                  type="button"
+                  className={`filters-segmented-btn ${tipo === '' ? 'active' : ''}`}
+                  onClick={() => handleTipoChange('')}
+                  role="radio"
+                  aria-checked={tipo === ''}
+                >
+                  Todos
+                </button>
+                <button
+                  type="button"
+                  className={`filters-segmented-btn ${tipo === 'desafio' ? 'active' : ''}`}
+                  onClick={() => handleTipoChange('desafio')}
+                  role="radio"
+                  aria-checked={tipo === 'desafio'}
+                >
+                  Estações
+                </button>
+                <button
+                  type="button"
+                  className={`filters-segmented-btn ${tipo === 'simulado' ? 'active' : ''}`}
+                  onClick={() => handleTipoChange('simulado')}
+                  role="radio"
+                  aria-checked={tipo === 'simulado'}
+                >
+                  Simulados
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="f" htmlFor="inFiltroSt">
-                Estação
-              </label>
+
+            {activeFiltersCount > 0 && (
+              <div className="filters-status-wrap">
+                <span className="filters-active-badge">
+                  {activeFiltersCount} {activeFiltersCount === 1 ? 'filtro ativo' : 'filtros ativos'}
+                </span>
+                <button
+                  type="button"
+                  className="filters-reset-btn"
+                  onClick={clearFilters}
+                  title="Restaurar todos os filtros"
+                >
+                  Limpar filtros
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Grid responsivo de filtros detalhados */}
+          <div className="filters-grid">
+            <div className="filters-field">
+              <label htmlFor="inFiltroSt">Estação</label>
               <select
                 id="inFiltroSt"
                 value={filtro.st}
+                disabled={tipo === 'simulado'}
+                title={tipo === 'simulado' ? 'Filtro exclusivo para estações' : undefined}
                 onChange={(e) => setFiltro((f) => ({ ...f, st: e.target.value }))}
               >
                 <option value="">Todas</option>
                 {[1, 2, 3, 4, 5, 6, 7].map((n) => (
                   <option key={n} value={String(n)}>
-                    E{n}
+                    {STATION_LABELS[n] || `Estação ${n}`}
                   </option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="f" htmlFor="inFiltroCrit">
-                Erro crítico
-              </label>
+
+            <div className="filters-field">
+              <label htmlFor="inFiltroCrit">Erro crítico</label>
               <select
                 id="inFiltroCrit"
                 value={filtro.crit}
+                disabled={tipo === 'simulado'}
+                title={tipo === 'simulado' ? 'Filtro exclusivo para estações' : undefined}
                 onChange={(e) => setFiltro((f) => ({ ...f, crit: e.target.value }))}
               >
                 <option value="">Todos</option>
-                <option value="1">Sim</option>
-                <option value="0">Não</option>
+                <option value="1">Com erro crítico</option>
+                <option value="0">Sem erro crítico</option>
               </select>
             </div>
-          </div>
-          <div style={{ height: 12 }} />
-          <div className="row">
-            <div>
-              <label className="f" htmlFor="inFiltroPeriodo">
-                Período
-              </label>
+
+            <div className="filters-field full-mobile">
+              <label htmlFor="inFiltroPeriodo">Turno / Período</label>
               <select
                 id="inFiltroPeriodo"
                 value={filtro.periodo}
+                disabled={tipo === 'simulado'}
+                title={tipo === 'simulado' ? 'Filtro exclusivo para estações' : undefined}
                 onChange={(e) => setFiltro((f) => ({ ...f, periodo: e.target.value }))}
               >
                 <option value="">Todos</option>
@@ -333,10 +420,9 @@ export function HistPage() {
                 <option value="noturno">Noturno</option>
               </select>
             </div>
-            <div>
-              <label className="f" htmlFor="inFiltroDe">
-                Data de
-              </label>
+
+            <div className="filters-field">
+              <label htmlFor="inFiltroDe">Data de</label>
               <input
                 type="date"
                 id="inFiltroDe"
@@ -345,10 +431,9 @@ export function HistPage() {
                 onChange={(e) => setFiltro((f) => ({ ...f, de: e.target.value }))}
               />
             </div>
-            <div>
-              <label className="f" htmlFor="inFiltroAte">
-                Data até
-              </label>
+
+            <div className="filters-field">
+              <label htmlFor="inFiltroAte">Data até</label>
               <input
                 type="date"
                 id="inFiltroAte"
@@ -361,7 +446,7 @@ export function HistPage() {
         </div>
         <div className="card hist">
           {loading ? (
-            <div className="empty">Carregando…</div>
+            <HistSkeleton count={4} />
           ) : !feed.length ? (
             <div className="empty">
               {totalBase ? 'Nenhum resultado para o filtro.' : 'Você ainda não tem avaliações salvas.'}
@@ -491,9 +576,6 @@ export function HistPage() {
           </nav>
         ) : null}
         <div className="hist-tools" aria-label="Ferramentas do histórico">
-          <button type="button" className="toolbtn" onClick={() => void onClearCache()}>
-            Limpar cache do sorteio
-          </button>
           <button type="button" className="toolbtn primary" onClick={() => void onDownload()}>
             Baixar planilha
           </button>
