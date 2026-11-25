@@ -12,23 +12,72 @@
   display: grid;
   gap: 10px;
 }
+.sim-app .simitem-wrap {
+  display: grid;
+  gap: 0;
+}
 .sim-app .simitem {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  min-height: var(--touch);
+}
+.sim-app .simitem-main {
+  flex: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  width: 100%;
   text-align: left;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  min-height: var(--touch);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  min-width: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.sim-app .simitem-main:hover {
+  background: color-mix(in srgb, var(--red) 6%, transparent);
 }
 .sim-app .simitem strong {
   display: block;
   font-size: 1.05rem;
   font-family: var(--font-display);
+}
+.sim-app .simitem-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+  align-self: center;
+}
+.sim-app .simitem-actions .btn {
+  width: auto;
+  min-width: 88px;
+  padding: 8px 12px;
+  min-height: 36px;
+  font-size: 0.9rem;
+}
+.sim-app .simitem-actions .btn.teal {
+  background: var(--red);
+  color: #fff;
+}
+.sim-app .simitem-edit {
+  margin-top: -2px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: 0;
+}
+@media (min-width: 640px) {
+  .sim-app .simitem-actions {
+    flex-direction: row;
+  }
 }
 .sim-app .simtitle {
   font-family: var(--font-display);

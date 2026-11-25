@@ -1,28 +1,54 @@
 import { useEffect } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { AlunoPane } from '../components/AlunoPane';
 import { GabPane } from '../components/GabPane';
 import { LancarPane } from '../components/LancarPane';
 import { ListaPane } from '../components/ListaPane';
 import { ResPane } from '../components/ResPane';
 import { useSimulados } from '../SimuladosContext';
+import type { SimTab } from '../types';
 import { esc } from '../utils';
+
+type LocState = { tab?: SimTab; alunoId?: string; fromHist?: boolean };
 
 export function SimPage() {
   const { id } = useParams<{ id: string }>();
-  const { cur, tab, setTab, aluno, setAluno, lancar, setLancar, setOpenQ } = useSimulados();
+  const loc = useLocation();
+  const state = (loc.state || {}) as LocState;
+  const { cur, loading, tab, setTab, aluno, setAluno, lancar, setLancar, setOpenQ } = useSimulados();
   const sim = id ? cur(id) : undefined;
+
+  useEffect(() => {
+    if (!state.tab && !state.alunoId) return;
+    if (state.tab) setTab(state.tab);
+    if (state.alunoId) {
+      setAluno(state.alunoId);
+      setLancar(false);
+    }
+  }, [id, state.tab, state.alunoId, setTab, setAluno, setLancar]);
 
   useEffect(() => {
     setOpenQ(null);
   }, [tab, aluno, lancar, setOpenQ]);
 
-  if (!id || !sim) return <Navigate to="/simulados" replace />;
+  if (!id) return <Navigate to="/simulados" replace />;
+  if (loading) return <p className="muted">Carregando simulado…</p>;
+  if (!sim) return <Navigate to="/simulados" replace />;
+
+  const backTo = state.fromHist ? '/desafio/historico' : '/simulados';
+  const backLabel = state.fromHist ? '‹ Voltar ao histórico' : '‹ Voltar aos simulados';
 
   return (
     <>
-      <Link to="/simulados" className="back" onClick={() => { setAluno(null); setLancar(false); }}>
-        ‹ Voltar aos simulados
+      <Link
+        to={backTo}
+        className="back"
+        onClick={() => {
+          setAluno(null);
+          setLancar(false);
+        }}
+      >
+        {backLabel}
       </Link>
       <h1 className="simtitle">{esc(sim.nome)}</h1>
       <div className="tabs" role="tablist">

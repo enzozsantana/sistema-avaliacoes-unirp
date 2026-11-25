@@ -4,8 +4,24 @@ import * as XLSX from 'xlsx';
 import { useAuth } from '../../../auth/AuthProvider';
 import { fmt, periodoLabel } from '../../../lib/storage';
 import { sb } from '../../../lib/supabase';
+import { simHistItems, tabelaRowsSimHist, type SimHistItem } from '../../simulados/hist';
+import { listSimulados } from '../../simulados/store';
 import { useDesafio } from '../DesafioContext';
-import { HIST_PER_PAGE, canManageRec, histFiltrado, tabelaRows, type HistFilters } from '../types';
+import {
+  HIST_PER_PAGE,
+  canManageRec,
+  histFiltrado,
+  histNoIntervalo,
+  tabelaRows,
+  type AvaliacaoRec,
+  type HistFilters,
+} from '../types';
+
+type TipoFiltro = '' | 'desafio' | 'simulado';
+
+type FeedItem =
+  | { kind: 'desafio'; sort: number; rec: AvaliacaoRec }
+  | { kind: 'simulado'; sort: number; item: SimHistItem };
 
 export function HistPage() {
   const nav = useNavigate();
@@ -24,47 +40,104 @@ export function HistPage() {
     st: '',
     crit: '',
     periodo: '',
+    de: '',
+    ate: '',
   });
+  const [tipo, setTipo] = useState<TipoFiltro>('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [simItems, setSimItems] = useState<SimHistItem[]>([]);
 
   useEffect(() => {
     void (async () => {
       setLoading(true);
-      await fetchHist();
-      setLoading(false);
+      try {
+        const [, sims] = await Promise.all([fetchHist(), listSimulados()]);
+        setSimItems(simHistItems(sims));
+      } catch (e) {
+        console.error(e);
+        toast('Erro ao carregar histórico');
+      } finally {
+        setLoading(false);
+      }
     })();
-  }, [fetchHist]);
+  }, [fetchHist, toast]);
 
-  const list = useMemo(() => histFiltrado(hist, filtro), [hist, filtro]);
-  const pages = Math.max(1, Math.ceil(list.length / HIST_PER_PAGE));
+  const desafioList = useMemo(() => histFiltrado(hist, filtro), [hist, filtro]);
+
+  const simList = useMemo(() => {
+    const q = filtro.q.trim().toLowerCase();
+    return simItems.filter((r) => {
+      if (q && !r.nome.toLowerCase().includes(q) && !r.simNome.toLowerCase().includes(q)) {
+        return false;
+      }
+      if (!histNoIntervalo(r.data || 0, filtro)) return false;
+      return true;
+    });
+  }, [simItems, filtro]);
+
+  const feed = useMemo(() => {
+    const items: FeedItem[] = [];
+    if (tipo !== 'simulado') {
+      for (const rec of desafioList) {
+        items.push({ kind: 'desafio', sort: new Date(rec.data).getTime(), rec });
+      }
+    }
+    if (tipo !== 'desafio') {
+      // estação / crítico / período só se aplicam ao desafio
+      const desafioOnlyFilters = !!(filtro.st || filtro.crit || filtro.periodo);
+      if (!desafioOnlyFilters || tipo === 'simulado') {
+        for (const item of simList) {
+          items.push({ kind: 'simulado', sort: item.data || 0, item });
+        }
+      }
+    }
+    return items.sort((a, b) => b.sort - a.sort);
+  }, [tipo, desafioList, simList, filtro.st, filtro.crit, filtro.periodo]);
+
+  const pages = Math.max(1, Math.ceil(feed.length / HIST_PER_PAGE));
   const safePage = Math.min(Math.max(1, page), pages);
   const start = (safePage - 1) * HIST_PER_PAGE;
-  const pageItems = list.slice(start, start + HIST_PER_PAGE);
-  const filtered = !!(filtro.q.trim() || filtro.st || filtro.crit || filtro.periodo);
+  const pageItems = feed.slice(start, start + HIST_PER_PAGE);
+  const filtered = !!(
+    filtro.q.trim() ||
+    filtro.st ||
+    filtro.crit ||
+    filtro.periodo ||
+    filtro.de ||
+    filtro.ate ||
+    tipo
+  );
 
   useEffect(() => {
     setPage(1);
-  }, [filtro.q, filtro.st, filtro.crit, filtro.periodo]);
+  }, [filtro.q, filtro.st, filtro.crit, filtro.periodo, filtro.de, filtro.ate, tipo]);
 
-  const lead = hist.length
-    ? `${hist.length} ${hist.length === 1 ? 'avaliação sua' : 'avaliações suas'} · mais recentes primeiro${filtered ? ` · ${list.length} no filtro` : ''}.`
-    : 'Você ainda não tem avaliações salvas.';
+  const totalBase = hist.length + simItems.length;
+  const lead = totalBase
+    ? `${hist.length} ${hist.length === 1 ? 'estação' : 'estações'} · ${simItems.length} ${
+        simItems.length === 1 ? 'prova de simulado' : 'provas de simulado'
+      } · mais recentes primeiro${filtered ? ` · ${feed.length} no filtro` : ''}.`
+    : 'Você ainda não tem avaliações nem provas de simulado salvas.';
 
-  function openRec(idx: number) {
-    const r = list[idx];
-    if (!r?.id) return;
-    nav(`/desafio/resultado/${r.id}`, { state: { fromHist: true } });
+  function openDesafio(rec: AvaliacaoRec) {
+    if (!rec.id) return;
+    nav(`/desafio/resultado/${rec.id}`, { state: { fromHist: true } });
   }
 
-  async function onDelete(idx: number) {
-    const r = list[idx];
-    if (!r?.id || !canManageRec(r, user?.id)) {
+  function openSimulado(item: SimHistItem) {
+    nav(`/simulados/${item.simId}`, {
+      state: { tab: 'corrigir', alunoId: item.alunoId, fromHist: true },
+    });
+  }
+
+  async function onDeleteDesafio(rec: AvaliacaoRec) {
+    if (!rec.id || !canManageRec(rec, user?.id)) {
       toast('Só é possível excluir suas próprias avaliações');
       return;
     }
     if (
-      !(await confirm(`Excluir a avaliação de ${r.nome}? Esta ação não pode ser desfeita.`, {
+      !(await confirm(`Excluir a avaliação de ${rec.nome}? Esta ação não pode ser desfeita.`, {
         title: 'Excluir avaliação',
         danger: true,
       }))
@@ -72,9 +145,9 @@ export function HistPage() {
       return;
     }
     try {
-      const { error } = await sb.from('avaliacoes').delete().eq('id', r.id);
+      const { error } = await sb.from('avaliacoes').delete().eq('id', rec.id);
       if (error) throw error;
-      removeHistById(r.id);
+      removeHistById(rec.id);
       toast('Avaliação excluída');
     } catch (e) {
       console.error(e);
@@ -96,16 +169,43 @@ export function HistPage() {
   }
 
   function buildXlsxBlob(): Blob {
-    const rows = tabelaRows(hist, filtro);
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    const colCount = rows[0]?.length || 0;
-    ws['!cols'] = Array.from({ length: colCount }, (_, i) => {
-      if (i === colCount - 1) return { wch: 40 };
-      if (i >= 6 && i <= 15) return { wch: 18 };
-      return { wch: 16 };
-    });
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Avaliações');
+    const includeDesafio = tipo !== 'simulado' && desafioList.length > 0;
+    const includeSim =
+      tipo !== 'desafio' &&
+      simList.length > 0 &&
+      (!(filtro.st || filtro.crit || filtro.periodo) || tipo === 'simulado');
+
+    if (includeDesafio) {
+      const rows = tabelaRows(hist, filtro);
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = Array.from({ length: rows[0]?.length || 0 }, (_, i) => {
+        if (i === (rows[0]?.length || 0) - 1) return { wch: 40 };
+        if (i >= 6 && i <= 15) return { wch: 18 };
+        return { wch: 16 };
+      });
+      XLSX.utils.book_append_sheet(wb, ws, 'Estações');
+    }
+
+    if (includeSim) {
+      const rows = tabelaRowsSimHist(simList);
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [
+        { wch: 18 },
+        { wch: 12 },
+        { wch: 28 },
+        { wch: 22 },
+        { wch: 16 },
+        { wch: 10 },
+        { wch: 12 },
+      ];
+      XLSX.utils.book_append_sheet(wb, ws, 'Simulados');
+    }
+
+    if (!wb.SheetNames.length) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Sem dados']]), 'Vazio');
+    }
+
     const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     return new Blob([out], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -113,11 +213,11 @@ export function HistPage() {
   }
 
   async function onDownload() {
-    if (!hist.length) {
+    if (!totalBase) {
       toast('Histórico vazio');
       return;
     }
-    if (!list.length) {
+    if (!feed.length) {
       toast('Nenhum resultado para o filtro');
       return;
     }
@@ -161,16 +261,30 @@ export function HistPage() {
         </div>
         <div className="card filters">
           <label className="f" htmlFor="inFiltro">
-            Buscar aluno ou RA
+            Buscar aluno, RA ou simulado
           </label>
           <input
             id="inFiltro"
             autoComplete="off"
-            placeholder="Nome ou RA"
+            placeholder="Nome, RA ou simulado"
             value={filtro.q}
             onChange={(e) => setFiltro((f) => ({ ...f, q: e.target.value }))}
           />
           <div className="row">
+            <div>
+              <label className="f" htmlFor="inFiltroTipo">
+                Tipo
+              </label>
+              <select
+                id="inFiltroTipo"
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value as TipoFiltro)}
+              >
+                <option value="">Todos</option>
+                <option value="desafio">Estações</option>
+                <option value="simulado">Simulados</option>
+              </select>
+            </div>
             <div>
               <label className="f" htmlFor="inFiltroSt">
                 Estação
@@ -204,84 +318,150 @@ export function HistPage() {
             </div>
           </div>
           <div style={{ height: 12 }} />
-          <label className="f" htmlFor="inFiltroPeriodo">
-            Período
-          </label>
-          <select
-            id="inFiltroPeriodo"
-            value={filtro.periodo}
-            onChange={(e) => setFiltro((f) => ({ ...f, periodo: e.target.value }))}
-          >
-            <option value="">Todos</option>
-            <option value="diurno">Diurno</option>
-            <option value="noturno">Noturno</option>
-          </select>
+          <div className="row">
+            <div>
+              <label className="f" htmlFor="inFiltroPeriodo">
+                Período
+              </label>
+              <select
+                id="inFiltroPeriodo"
+                value={filtro.periodo}
+                onChange={(e) => setFiltro((f) => ({ ...f, periodo: e.target.value }))}
+              >
+                <option value="">Todos</option>
+                <option value="diurno">Diurno</option>
+                <option value="noturno">Noturno</option>
+              </select>
+            </div>
+            <div>
+              <label className="f" htmlFor="inFiltroDe">
+                Data de
+              </label>
+              <input
+                type="date"
+                id="inFiltroDe"
+                value={filtro.de}
+                max={filtro.ate || undefined}
+                onChange={(e) => setFiltro((f) => ({ ...f, de: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="f" htmlFor="inFiltroAte">
+                Data até
+              </label>
+              <input
+                type="date"
+                id="inFiltroAte"
+                value={filtro.ate}
+                min={filtro.de || undefined}
+                onChange={(e) => setFiltro((f) => ({ ...f, ate: e.target.value }))}
+              />
+            </div>
+          </div>
         </div>
         <div className="card hist">
           {loading ? (
             <div className="empty">Carregando…</div>
-          ) : !list.length ? (
+          ) : !feed.length ? (
             <div className="empty">
-              {hist.length ? 'Nenhum resultado para o filtro.' : 'Você ainda não tem avaliações salvas.'}
+              {totalBase ? 'Nenhum resultado para o filtro.' : 'Você ainda não tem avaliações salvas.'}
             </div>
           ) : (
-            pageItems.map((r, i) => {
-              const idx = start + i;
-              const manage = canManageRec(r, user?.id);
+            pageItems.map((entry) => {
+              if (entry.kind === 'desafio') {
+                const r = entry.rec;
+                const manage = canManageRec(r, user?.id);
+                return (
+                  <div key={r.id || `${r.data}-${r.nome}`} className="h">
+                    <div className="h-main">
+                      <div>
+                        <div className="row1">
+                          <strong>{r.nome}</strong>
+                          <span className="badge soft">Estação</span>
+                          {r.crit ? <span className="badge">Crítico</span> : null}
+                        </div>
+                        <span className="meta">
+                          RA {r.ra || '—'} · Período {periodoLabel(r.periodo)}
+                        </span>
+                        <span className="meta">
+                          Estação {r.st} ·{' '}
+                          {new Date(r.data).toLocaleString('pt-BR', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })}
+                        </span>
+                      </div>
+                      <span className="g">{fmt(r.nota)}</span>
+                    </div>
+                    <div className="h-actions">
+                      <button type="button" className="iconbtn" onClick={() => openDesafio(r)}>
+                        Ver
+                      </button>
+                      {manage ? (
+                        <>
+                          <button
+                            type="button"
+                            className="iconbtn"
+                            onClick={() =>
+                              nav(`/desafio/resultado/${r.id}`, {
+                                state: { fromHist: true, openEdit: true },
+                              })
+                            }
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            className="iconbtn danger"
+                            onClick={() => void onDeleteDesafio(r)}
+                          >
+                            Excluir
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              }
+
+              const s = entry.item;
               return (
-                <div key={r.id || `${r.data}-${idx}`} className="h">
+                <div key={s.id} className="h">
                   <div className="h-main">
                     <div>
                       <div className="row1">
-                        <strong>{r.nome}</strong>
-                        {r.crit ? <span className="badge">Crítico</span> : null}
+                        <strong>{s.nome}</strong>
+                        <span className="badge soft">Simulado</span>
                       </div>
+                      <span className="meta">{s.simNome}</span>
                       <span className="meta">
-                        RA {r.ra || '—'} · Período {periodoLabel(r.periodo)}
-                      </span>
-                      <span className="meta">
-                        Estação {r.st} ·{' '}
-                        {new Date(r.data).toLocaleString('pt-BR', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}
+                        {s.ac} de {s.val} acertos
+                        {s.data
+                          ? ` · ${new Date(s.data).toLocaleString('pt-BR', {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                            })}`
+                          : ''}
                       </span>
                     </div>
-                    <span className="g">{fmt(r.nota)}</span>
+                    <span className="g">
+                      {fmt(s.nota)}
+                      <small style={{ display: 'block', fontSize: '0.7rem', opacity: 0.7 }}>
+                        / {fmt(s.max)}
+                      </small>
+                    </span>
                   </div>
                   <div className="h-actions">
-                    <button type="button" className="iconbtn" onClick={() => openRec(idx)}>
+                    <button type="button" className="iconbtn" onClick={() => openSimulado(s)}>
                       Ver
                     </button>
-                    {manage ? (
-                      <>
-                        <button
-                          type="button"
-                          className="iconbtn"
-                          onClick={() =>
-                            nav(`/desafio/resultado/${r.id}`, {
-                              state: { fromHist: true, openEdit: true },
-                            })
-                          }
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          className="iconbtn danger"
-                          onClick={() => void onDelete(idx)}
-                        >
-                          Excluir
-                        </button>
-                      </>
-                    ) : null}
                   </div>
                 </div>
               );
             })
           )}
         </div>
-        {!loading && list.length > HIST_PER_PAGE ? (
+        {!loading && feed.length > HIST_PER_PAGE ? (
           <nav className="pager" aria-label="Paginação do histórico">
             <button
               type="button"

@@ -607,6 +607,10 @@ body.is-auth .wrap {
   padding: 2px 7px;
   vertical-align: middle;
 }
+.badge.soft {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--line) 65%, transparent);
+}
 
 /* Login */
 #vAuth.enter-in .logo,

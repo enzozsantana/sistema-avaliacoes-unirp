@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../../../auth/AuthProvider';
+import { alunoResultText, copyTxt } from '../export';
 import { objetivas } from '../omr/core.js';
 import {
   aplicaSeq,
@@ -27,7 +29,8 @@ function espHTML(sim: Simulado, i: number) {
 }
 
 export function AlunoPane({ sim, alunoId }: { sim: Simulado; alunoId: string }) {
-  const { mutateSim, setAluno, prev } = useSimulados();
+  const { meProf } = useAuth();
+  const { mutateSim, setAluno, prev, flashStatus } = useSimulados();
   const a = sim.alunos.find((x) => x.id === alunoId);
   const nomeRef = useRef<HTMLInputElement>(null);
   const [, bump] = useState(0);
@@ -287,6 +290,19 @@ export function AlunoPane({ sim, alunoId }: { sim: Simulado; alunoId: string }) 
         </details>
       ) : null}
       <div className="actions">
+        <button
+          type="button"
+          className="btn teal"
+          onClick={() =>
+            void copyTxt(
+              alunoResultText(sim, a, meProf?.nome_completo),
+              flashStatus,
+              flashStatus,
+            )
+          }
+        >
+          Copiar resultado
+        </button>
         <button type="button" className="btn" onClick={novaProva}>
           Salvar e corrigir a próxima
         </button>

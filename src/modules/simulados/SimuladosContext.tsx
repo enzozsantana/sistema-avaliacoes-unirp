@@ -27,6 +27,7 @@ type SimuladosCtx = {
   sims: Simulado[];
   loading: boolean;
   saveStatus: string;
+  flashStatus: (msg: string) => void;
   cur: (id: string) => Simulado | undefined;
   updateSim: (id: string, fn: (s: Simulado) => void) => void;
   mutateSim: (id: string, fn: (s: Simulado) => void) => void;
@@ -58,6 +59,9 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
   const [sims, setSims] = useState<Simulado[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('');
+  const flashStatus = useCallback((msg: string) => {
+    setSaveStatus(msg);
+  }, []);
   const [tab, setTab] = useState<SimTab>('gabarito');
   const [aluno, setAluno] = useState<string | null>(null);
   const [lancar, setLancar] = useState(false);
@@ -310,6 +314,7 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
       sims,
       loading,
       saveStatus,
+      flashStatus,
       cur,
       updateSim,
       mutateSim,
@@ -337,6 +342,7 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
       sims,
       loading,
       saveStatus,
+      flashStatus,
       cur,
       updateSim,
       mutateSim,

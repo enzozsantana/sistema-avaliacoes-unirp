@@ -1,3 +1,8 @@
+import {
+  alunosComProva,
+  buildSimXlsxBlob,
+  simFilenameBase,
+} from '../export';
 import { downloadBlob } from '../download';
 import { fmtN, isDisc, peso, score, temPts } from '../score';
 import { useSimulados } from '../SimuladosContext';
@@ -5,10 +10,8 @@ import type { Simulado } from '../types';
 import { esc, fmt, LETTERS } from '../utils';
 
 export function ResPane({ sim }: { sim: Simulado }) {
-  const { openQ, setOpenQ } = useSimulados();
-  const al = sim.alunos.filter(
-    (a) => a.nome.trim() || a.resp.replace(/\./g, '') || (a.pts && Object.keys(a.pts).length),
-  );
+  const { openQ, setOpenQ, flashStatus } = useSimulados();
+  const al = alunosComProva(sim);
 
   if (!al.length) {
     return <div className="card empty muted">Os resultados aparecem aqui assim que você corrigir a primeira prova.</div>;
@@ -58,67 +61,16 @@ export function ResPane({ sim }: { sim: Simulado }) {
     .slice(0, 3)
     .filter((q) => (q.pct ?? 0) < 60);
 
-  const csv = async () => {
-    const q = (v: unknown) => '"' + String(v).replace(/"/g, '""') + '"';
-    const head = [
-      'Posição',
-      'Aluno',
-      'Acertos objetivas',
-      'Objetivas válidas',
-      'Pontos',
-      'Total de pontos',
-      'Nota',
-    ].concat(Array.from({ length: sim.nq }, (_, i) => 'Q' + (i + 1) + (isDisc(sim, i) ? ' (dissertativa)' : '')));
-    const lines = [
-      head.map(q).join(';'),
-      [
-        '',
-        'GABARITO',
-        '',
-        '',
-        '',
-        '',
-        '',
-        ...Array.from({ length: sim.nq }, (_, i) =>
-          isDisc(sim, i) ? '' : sim.anul.includes(i) ? 'anulada' : sim.gab[i] === '.' ? '' : sim.gab[i],
-        ),
-      ].map(q).join(';'),
-      ['', 'PESO', '', '', '', '', '', ...Array.from({ length: sim.nq }, (_, i) => fmtN(peso(sim, i)))].map(q).join(
-        ';',
-      ),
-    ];
-    rows.forEach((r, k) =>
-      lines.push(
-        [
-          k + 1,
-          r.a.nome || 'Sem nome',
-          r.s.ac,
-          r.s.val,
-          fmtN(r.s.pt),
-          fmtN(r.s.tot),
-          fmt(r.s.nota),
-          ...Array.from({ length: sim.nq }, (_, i) =>
-            isDisc(sim, i)
-              ? temPts(r.a.pts, i)
-                ? fmtN(+r.a.pts![i]!)
-                : ''
-              : r.a.resp[i] === '.' || !r.a.resp[i]
-                ? ''
-                : r.a.resp[i],
-          ),
-        ].map(q).join(';'),
-      ),
-    );
-    const nome =
-      (sim.nome
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w-]+/g, '-')
-        .replace(/^-|-$/g, '') || 'simulado') + '.csv';
+  const baixarPlanilha = async () => {
+    const hoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    const filename = `${simFilenameBase(sim)}_notas_${hoje}.xlsx`;
     try {
-      await downloadBlob({ filename: nome, data: '\ufeff' + lines.join('\r\n') });
-    } catch {
-      /* ignore */
+      const blob = buildSimXlsxBlob(sim);
+      await downloadBlob({ filename, data: blob });
+      flashStatus('Planilha .xlsx baixada');
+    } catch (e) {
+      console.error(e);
+      flashStatus('Não foi possível gerar o arquivo .xlsx');
     }
   };
 
@@ -252,8 +204,8 @@ export function ResPane({ sim }: { sim: Simulado }) {
         })}
       </div>
       <div className="actions">
-        <button type="button" className="btn ghost" onClick={() => void csv()}>
-          Baixar planilha (CSV)
+        <button type="button" className="btn" onClick={() => void baixarPlanilha()}>
+          Baixar planilha
         </button>
       </div>
     </>

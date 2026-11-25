@@ -145,7 +145,35 @@ export type HistFilters = {
   st: string;
   crit: string;
   periodo: string;
+  /** YYYY-MM-DD inclusive start (local) */
+  de: string;
+  /** YYYY-MM-DD inclusive end (local) */
+  ate: string;
 };
+
+/** Start of local day for `YYYY-MM-DD`, or null if empty/invalid. */
+export function histDiaInicio(isoDate: string): number | null {
+  const s = isoDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const t = new Date(`${s}T00:00:00`).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+
+/** End of local day for `YYYY-MM-DD`, or null if empty/invalid. */
+export function histDiaFim(isoDate: string): number | null {
+  const s = isoDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const t = new Date(`${s}T23:59:59.999`).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+
+export function histNoIntervalo(ts: number, f: Pick<HistFilters, 'de' | 'ate'>): boolean {
+  const de = histDiaInicio(f.de);
+  const ate = histDiaFim(f.ate);
+  if (de !== null && ts < de) return false;
+  if (ate !== null && ts > ate) return false;
+  return true;
+}
 
 export function histFiltrado(hist: AvaliacaoRec[], f: HistFilters): AvaliacaoRec[] {
   const q = f.q.trim().toLowerCase();
@@ -158,6 +186,7 @@ export function histFiltrado(hist: AvaliacaoRec[], f: HistFilters): AvaliacaoRec
       if (f.crit === '1' && !r.crit) return false;
       if (f.crit === '0' && r.crit) return false;
       if (f.periodo && r.periodo !== f.periodo) return false;
+      if (!histNoIntervalo(new Date(r.data).getTime(), f)) return false;
       return true;
     })
     .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
