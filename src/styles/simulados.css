@@ -68,11 +68,128 @@
   background: var(--red);
   color: #fff;
 }
-.sim-app .simitem-edit {
+.sim-app .simitem-edit,
+.sim-app .sim-share {
   margin-top: -2px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
   border-top: 0;
+}
+.sim-app .sim-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  vertical-align: middle;
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  border-radius: var(--radius-pill);
+}
+.sim-app .sim-shared-banner {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--red) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--red) 22%, var(--line));
+  border-radius: var(--radius);
+}
+.sim-app .sim-share-list {
+  display: grid;
+  gap: 6px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 92%, var(--ink));
+}
+.sim-app .sim-share-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.sim-app .sim-share-opt:hover {
+  background: color-mix(in srgb, var(--red) 6%, transparent);
+}
+.sim-app .sim-share-opt.on {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+}
+.sim-app .sim-share-opt input {
+  margin-top: 3px;
+  width: auto;
+  min-height: 0;
+}
+.sim-app .sim-share-opt strong {
+  display: block;
+  font-size: 0.98rem;
+}
+.sim-app .sim-share-opt .small {
+  display: block;
+}
+.sim-app .simitem-wrap:has(.sim-share-summary) .simitem {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.sim-app .sim-share-summary {
+  display: grid;
+  gap: 8px;
+  margin-top: -2px;
+  padding: 10px 12px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+.sim-app .simitem-wrap:has(.sim-share) .sim-share-summary,
+.sim-app .simitem-wrap:has(.simitem-edit) .sim-share-summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.sim-app .sim-share-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sim-app .sim-share-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 4px 4px 10px;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 22%, var(--line));
+  border-radius: var(--radius-pill);
+}
+.sim-app .sim-share-chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--red);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.sim-app .sim-share-chip-x:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+}
+.sim-app .sim-share-chip-x:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 @media (min-width: 640px) {
   .sim-app .simitem-actions {

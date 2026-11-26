@@ -16,7 +16,8 @@ export function SimPage() {
   const { id } = useParams<{ id: string }>();
   const loc = useLocation();
   const state = (loc.state || {}) as LocState;
-  const { cur, loading, tab, setTab, aluno, setAluno, lancar, setLancar, setOpenQ } = useSimulados();
+  const { cur, loading, tab, setTab, aluno, setAluno, lancar, setLancar, setOpenQ, isOwner } =
+    useSimulados();
   const sim = id ? cur(id) : undefined;
 
   useEffect(() => {
@@ -52,6 +53,14 @@ export function SimPage() {
         {backLabel}
       </Link>
       <h1 className="simtitle">{esc(sim.nome)}</h1>
+      {sim.shared || !isOwner(sim) ? (
+        <p className="sim-shared-banner">
+          {sim.ownerName
+            ? `Criado por ${esc(sim.ownerName)} e compartilhado com você.`
+            : 'Simulado compartilhado com você.'}{' '}
+          Você pode ver e editar o pacote completo (gabarito, correções e resultados).
+        </p>
+      ) : null}
       <div className="tabs" role="tablist">
         {(
           [

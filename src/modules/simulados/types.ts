@@ -23,6 +23,14 @@ export type Simulado = {
   disc?: number[];
   peso?: (number | null | string)[];
   esp?: Record<number, string>;
+  /** Dono no banco (`simulados.professor_id`) — não vai em `dados`. */
+  professorId?: string;
+  /** Nome do professor que criou — não vai em `dados`. */
+  ownerName?: string;
+  /** True quando o simulado foi compartilhado com o usuário atual. */
+  shared?: boolean;
+  /** Com quem o dono compartilhou (só preenchido para o dono) — não vai em `dados`. */
+  sharedWith?: { id: string; nome: string }[];
 };
 
 export type AlunoPreview = {

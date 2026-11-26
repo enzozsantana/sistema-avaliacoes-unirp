@@ -11,10 +11,18 @@ import {
 import { useAuth } from '../../auth/AuthProvider';
 import { folhaPDF } from './folhaPdf';
 import { lerFotos, pickFiles } from './omr/image';
-import { listSimulados, removeSimulado, saveSimulado } from './store';
+import {
+  listProfessores,
+  listSimuladoShares,
+  listSimulados,
+  removeSimulado,
+  saveSimulado,
+  setSimuladoShares,
+} from './store';
 import type { AlunoPreview, SimPeriodo, SimTab, Simulado } from './types';
 import { defaultSimulado } from './utils';
 import { gabFaltando } from './score';
+import type { Professor } from '../../auth/AuthProvider';
 
 type JobState = {
   show: boolean;
@@ -39,6 +47,11 @@ type SimuladosCtx = {
     periodo: SimPeriodo;
   }) => Simulado;
   removeSim: (id: string) => Promise<void>;
+  isOwner: (sim: Simulado) => boolean;
+  loadProfessores: () => Promise<Professor[]>;
+  loadShares: (simuladoId: string) => Promise<string[]>;
+  saveShares: (simuladoId: string, professorIds: string[]) => Promise<void>;
+  removeShare: (simuladoId: string, professorId: string) => Promise<void>;
   persist: (sim: Simulado) => void;
   tab: SimTab;
   setTab: (t: SimTab) => void;
@@ -62,6 +75,7 @@ const Ctx = createContext<SimuladosCtx | null>(null);
 
 export function SimuladosProvider({ children }: { children: ReactNode }) {
   const { user, meProf } = useAuth();
+  const myName = meProf?.nome_completo;
   const [sims, setSims] = useState<Simulado[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('');
@@ -125,6 +139,10 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
   const cloneList = (list: Simulado[]) =>
     list.map((s) => ({
       ...s,
+      professorId: s.professorId,
+      ownerName: s.ownerName,
+      shared: s.shared,
+      sharedWith: s.sharedWith ? s.sharedWith.map((p) => ({ ...p })) : undefined,
       anul: [...s.anul],
       disc: s.disc ? [...s.disc] : undefined,
       peso: s.peso ? [...s.peso] : undefined,
@@ -173,7 +191,7 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
     (async () => {
       setLoading(true);
       try {
-        const list = await listSimulados();
+        const list = await listSimulados(user.id);
         if (!alive) return;
         setSims(
           list
@@ -182,6 +200,10 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
               defaultSimulado({
                 ...s,
                 id: s.id,
+                professorId: s.professorId,
+                ownerName: s.ownerName,
+                shared: s.shared,
+                sharedWith: s.sharedWith,
                 gab: s.gab || '.'.repeat(s.nq),
                 anul: s.anul || [],
                 alunos: (s.alunos || []).map((a) => ({
@@ -207,8 +229,14 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
 
   const cur = useCallback((id: string) => sims.find((s) => s.id === id), [sims]);
 
+  const isOwner = useCallback(
+    (sim: Simulado) => Boolean(user && (sim.professorId || user.id) === user.id && !sim.shared),
+    [user],
+  );
+
   const createSim = useCallback(
     (partial: { nome: string; nq: number; na: number; max: number; periodo: SimPeriodo }) => {
+      if (!user) throw new Error('Usuário não autenticado');
       const sim = defaultSimulado({
         id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
         nome: partial.nome.trim() || 'Simulado sem nome',
@@ -218,16 +246,25 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
         periodo: partial.periodo,
         gab: '.'.repeat(partial.nq),
         criado: Date.now(),
+        professorId: user.id,
+        ownerName: myName || undefined,
+        shared: false,
+        sharedWith: [],
       });
       setSims((l) => [sim, ...l]);
       persist(sim);
       return sim;
     },
-    [persist],
+    [persist, user, myName],
   );
 
   const removeSim = useCallback(
     async (id: string) => {
+      const sim = simsRef.current.find((s) => s.id === id);
+      if (sim && !isOwner(sim)) {
+        setSaveStatus('Só o dono pode excluir o simulado');
+        return;
+      }
       clearTimeout(timers.current[id]);
       try {
         await removeSimulado(id);
@@ -237,7 +274,38 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
       }
       setSims((l) => l.filter((s) => s.id !== id));
     },
-    [],
+    [isOwner],
+  );
+
+  const loadProfessores = useCallback(async () => listProfessores(), []);
+
+  const loadShares = useCallback(async (simuladoId: string) => listSimuladoShares(simuladoId), []);
+
+  const saveShares = useCallback(
+    async (simuladoId: string, professorIds: string[]) => {
+      if (!user) throw new Error('Usuário não autenticado');
+      await setSimuladoShares(simuladoId, user.id, professorIds);
+      const profs = await listProfessores();
+      const byId = new Map(profs.map((p) => [p.id, p.nome_completo]));
+      const sharedWith = professorIds
+        .map((id) => ({ id, nome: byId.get(id) || 'Professor' }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      setSims((list) =>
+        list.map((s) => (s.id === simuladoId ? { ...s, sharedWith } : s)),
+      );
+      setSaveStatus('Compartilhamento atualizado');
+    },
+    [user],
+  );
+
+  const removeShare = useCallback(
+    async (simuladoId: string, professorId: string) => {
+      const sim = simsRef.current.find((s) => s.id === simuladoId);
+      if (!sim || !user) return;
+      const next = (sim.sharedWith || []).filter((p) => p.id !== professorId).map((p) => p.id);
+      await saveShares(simuladoId, next);
+    },
+    [user, saveShares],
   );
 
   const startJob = useCallback((msg: string) => {
@@ -327,6 +395,11 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
       mutateSim,
       createSim,
       removeSim,
+      isOwner,
+      loadProfessores,
+      loadShares,
+      saveShares,
+      removeShare,
       persist,
       tab,
       setTab,
@@ -355,6 +428,11 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
       mutateSim,
       createSim,
       removeSim,
+      isOwner,
+      loadProfessores,
+      loadShares,
+      saveShares,
+      removeShare,
       persist,
       tab,
       aluno,
