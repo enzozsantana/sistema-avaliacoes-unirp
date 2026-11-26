@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../auth/AuthProvider';
 import { SimuladosHomeSkeleton } from '../../../components/Skeleton';
 import { periodoLabel } from '../../../lib/storage';
 import { PeriodoSeg } from '../components/PeriodoSeg';
@@ -32,6 +33,7 @@ export function HomePage() {
     setLancar,
     flashStatus,
   } = useSimulados();
+  const { isSuperAdmin } = useAuth();
   const nav = useNavigate();
   const [nNome, setNNome] = useState('');
   const [nQ, setNQ] = useState('20');
@@ -47,7 +49,8 @@ export function HomePage() {
 
   const list = sims.slice().sort((a, b) => (b.criado || 0) - (a.criado || 0));
   const meus = list.filter((s) => isOwner(s));
-  const recebidos = list.filter((s) => !isOwner(s));
+  const recebidos = list.filter((s) => !isOwner(s) && s.shared);
+  const outrosSistema = list.filter((s) => !isOwner(s) && s.adminAccess);
 
   const criar = () => {
     if (nPeriodo !== 'diurno' && nPeriodo !== 'noturno') {
@@ -160,7 +163,8 @@ export function HomePage() {
     const editing = edit?.id === s.id;
     const sharing = shareId === s.id;
     const owner = isOwner(s);
-    const recipients = owner ? s.sharedWith || [] : [];
+    const recipients = s.sharedWith || [];
+    const showShareSummary = owner || (isSuperAdmin && recipients.length > 0);
 
     return (
       <div key={s.id} className="simitem-wrap">
@@ -170,10 +174,13 @@ export function HomePage() {
               <strong>
                 {s.nome}
                 {s.shared ? <span className="sim-badge">Compartilhado</span> : null}
+                {s.adminAccess ? <span className="sim-badge">Sistema</span> : null}
               </strong>
               <span className="small muted">
-                {s.shared && s.ownerName
-                  ? `Criado por ${s.ownerName} · compartilhado com você · `
+                {!owner && s.ownerName
+                  ? s.shared
+                    ? `Criado por ${s.ownerName} · compartilhado com você · `
+                    : `Criado por ${s.ownerName} · `
                   : null}
                 {periodoLabel(s.periodo)} · {s.nq} questões, {s.alunos.length}{' '}
                 {s.alunos.length === 1 ? 'prova corrigida' : 'provas corrigidas'}
@@ -215,7 +222,7 @@ export function HomePage() {
             ) : null}
           </div>
         </div>
-        {owner ? (
+        {showShareSummary ? (
           <div className="sim-share-summary">
             {recipients.length ? (
               <>
@@ -226,23 +233,25 @@ export function HomePage() {
                     return (
                       <span key={p.id} className="sim-share-chip">
                         {p.nome}
-                        <button
-                          type="button"
-                          className="sim-share-chip-x"
-                          aria-label={`Remover acesso de ${p.nome}`}
-                          disabled={removingShare === key}
-                          onClick={() => void revokeShare(s.id, p.id, p.nome)}
-                        >
-                          ×
-                        </button>
+                        {owner ? (
+                          <button
+                            type="button"
+                            className="sim-share-chip-x"
+                            aria-label={`Remover acesso de ${p.nome}`}
+                            disabled={removingShare === key}
+                            onClick={() => void revokeShare(s.id, p.id, p.nome)}
+                          >
+                            ×
+                          </button>
+                        ) : null}
                       </span>
                     );
                   })}
                 </div>
               </>
-            ) : (
+            ) : owner ? (
               <span className="small muted">Ainda não compartilhado com ninguém.</span>
-            )}
+            ) : null}
           </div>
         ) : null}
         {sharing && owner ? (
@@ -403,9 +412,19 @@ export function HomePage() {
         </>
       ) : null}
 
+      {outrosSistema.length ? (
+        <>
+          <h2 style={{ fontSize: '1.1rem', margin: '26px 0 10px' }}>
+            Todos os simulados do sistema
+          </h2>
+          <div className="simlist">{outrosSistema.map(renderItem)}</div>
+        </>
+      ) : null}
+
       <p className="hint" style={{ marginTop: 16 }}>
         Os dados ficam salvos na sua conta e você pode compartilhar o pacote completo (gabarito,
         correções e resultados) com outros professores.
+        {isSuperAdmin ? ' Como super admin, você também vê tudo o que outros professores criaram.' : ''}
       </p>
     </>
   );

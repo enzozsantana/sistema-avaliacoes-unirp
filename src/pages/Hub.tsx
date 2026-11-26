@@ -13,7 +13,7 @@ type RecentItem =
   | { kind: 'simulado'; sort: number; item: SimHistItem };
 
 export function HubPage() {
-  const { meProf, user } = useAuth();
+  const { meProf, user, isSuperAdmin } = useAuth();
   const nav = useNavigate();
   const [hist, setHist] = useState<AvaliacaoRec[]>([]);
   const [simItems, setSimItems] = useState<SimHistItem[]>([]);
@@ -24,13 +24,18 @@ export function HubPage() {
     void (async () => {
       setLoading(true);
       try {
+        let avQuery = sb
+          .from('avaliacoes')
+          .select('*,professores(nome_completo)')
+          .order('created_at', { ascending: false });
+        if (!isSuperAdmin) {
+          avQuery = avQuery.eq('professor_id', user.id);
+        }
         const [{ data }, sims] = await Promise.all([
-          sb
-            .from('avaliacoes')
-            .select('*,professores(nome_completo)')
-            .eq('professor_id', user.id)
-            .order('created_at', { ascending: false }),
-          listSimulados().catch(() => [] as Awaited<ReturnType<typeof listSimulados>>),
+          avQuery,
+          listSimulados(user.id, { isSuperAdmin }).catch(
+            () => [] as Awaited<ReturnType<typeof listSimulados>>,
+          ),
         ]);
         setHist((data || []).map((row) => mapAvaliacao(row as Parameters<typeof mapAvaliacao>[0])));
         setSimItems(simHistItems(sims));
@@ -38,7 +43,7 @@ export function HubPage() {
         setLoading(false);
       }
     })();
-  }, [user]);
+  }, [user, isSuperAdmin]);
 
   if (loading) return <HubSkeleton />;
 
@@ -74,7 +79,10 @@ export function HubPage() {
     <section>
       <div className="page-head">
         <h1>Olá, {firstName(meProf?.nome_completo || 'professor')}</h1>
-        <p className="lead">Sistema de Avaliações UNIRP · área do professor</p>
+        <p className="lead">
+          Sistema de Avaliações UNIRP · área do professor
+          {isSuperAdmin ? ' · super admin' : ''}
+        </p>
       </div>
       <div className="stats" aria-live="polite">
         <div className="stat">

@@ -29,7 +29,9 @@ export type Simulado = {
   ownerName?: string;
   /** True quando o simulado foi compartilhado com o usuário atual. */
   shared?: boolean;
-  /** Com quem o dono compartilhou (só preenchido para o dono) — não vai em `dados`. */
+  /** True quando o acesso vem só do modo super admin (não é dono nem compartilhamento). */
+  adminAccess?: boolean;
+  /** Com quem o simulado está compartilhado — não vai em `dados`. */
   sharedWith?: { id: string; nome: string }[];
 };
 

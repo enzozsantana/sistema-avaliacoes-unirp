@@ -16,6 +16,7 @@ function dadosPayload(sim: Simulado): Record<string, unknown> {
   delete body.professorId;
   delete body.ownerName;
   delete body.shared;
+  delete body.adminAccess;
   delete body.sharedWith;
   return body;
 }
@@ -33,17 +34,9 @@ type ShareRow = {
   professores?: { nome_completo: string } | { nome_completo: string }[] | null;
 };
 
-async function listOwnedShareMap(
-  ownerId: string,
-): Promise<Record<string, { id: string; nome: string }[]>> {
-  const { data, error } = await sb
-    .from('simulado_compartilhamentos')
-    .select('simulado_id,professor_id,professores!simulado_compartilhamentos_professor_id_fkey(nome_completo)')
-    .eq('shared_by', ownerId);
-  if (error) throw error;
-
+function buildShareMap(rows: ShareRow[]): Record<string, { id: string; nome: string }[]> {
   const map: Record<string, { id: string; nome: string }[]> = {};
-  for (const row of (data || []) as ShareRow[]) {
+  for (const row of rows) {
     const rel = row.professores;
     const nome = (Array.isArray(rel) ? rel[0] : rel)?.nome_completo || 'Professor';
     (map[row.simulado_id] ||= []).push({ id: row.professor_id, nome });
@@ -54,23 +47,54 @@ async function listOwnedShareMap(
   return map;
 }
 
-export async function listSimulados(userId: string): Promise<Simulado[]> {
-  const [{ data, error }, shareMap] = await Promise.all([
+async function listShareMap(opts: {
+  userId: string;
+  isSuperAdmin?: boolean;
+}): Promise<{
+  bySim: Record<string, { id: string; nome: string }[]>;
+  sharedWithMe: Set<string>;
+}> {
+  let query = sb
+    .from('simulado_compartilhamentos')
+    .select(
+      'simulado_id,professor_id,professores!simulado_compartilhamentos_professor_id_fkey(nome_completo)',
+    );
+
+  if (!opts.isSuperAdmin) {
+    query = query.or(`shared_by.eq.${opts.userId},professor_id.eq.${opts.userId}`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  const rows = (data || []) as ShareRow[];
+  const sharedWithMe = new Set(
+    rows.filter((r) => r.professor_id === opts.userId).map((r) => r.simulado_id),
+  );
+  return { bySim: buildShareMap(rows), sharedWithMe };
+}
+
+export async function listSimulados(
+  userId: string,
+  opts?: { isSuperAdmin?: boolean },
+): Promise<Simulado[]> {
+  const isSuperAdmin = Boolean(opts?.isSuperAdmin);
+  const [{ data, error }, shares] = await Promise.all([
     sb
       .from('simulados')
       .select('id,professor_id,dados,professores(nome_completo)')
       .order('created_at', { ascending: false }),
-    listOwnedShareMap(userId),
+    listShareMap({ userId, isSuperAdmin }),
   ]);
   if (error) throw error;
   return ((data || []) as SimuladoRow[]).map((r) => {
     const sim = { ...(r.dados as object), id: r.id } as Simulado;
+    const mine = r.professor_id === userId;
+    const sharedWithMe = shares.sharedWithMe.has(r.id);
     sim.professorId = r.professor_id;
     sim.ownerName = ownerNameFromRow(r);
-    sim.shared = r.professor_id !== userId;
-    if (r.professor_id === userId) {
-      sim.sharedWith = shareMap[r.id] || [];
-    }
+    sim.shared = sharedWithMe;
+    sim.adminAccess = isSuperAdmin && !mine && !sharedWithMe;
+    sim.sharedWith = shares.bySim[r.id] || [];
     return sim;
   });
 }
@@ -89,7 +113,7 @@ export async function saveSimulado(sim: Simulado, userId: string): Promise<void>
     return;
   }
 
-  // Colaborador: atualiza só o pacote (dados), sem tocar no dono
+  // Colaborador / super admin: atualiza só o pacote (dados), sem tocar no dono
   const { error } = await sb.from('simulados').update({ dados }).eq('id', id);
   if (error) throw error;
 }

@@ -53,11 +53,15 @@ export function SimPage() {
         {backLabel}
       </Link>
       <h1 className="simtitle">{esc(sim.nome)}</h1>
-      {sim.shared || !isOwner(sim) ? (
+      {!isOwner(sim) ? (
         <p className="sim-shared-banner">
-          {sim.ownerName
-            ? `Criado por ${esc(sim.ownerName)} e compartilhado com você.`
-            : 'Simulado compartilhado com você.'}{' '}
+          {sim.adminAccess
+            ? sim.ownerName
+              ? `Visão de super admin · criado por ${esc(sim.ownerName)}.`
+              : 'Visão de super admin.'
+            : sim.ownerName
+              ? `Criado por ${esc(sim.ownerName)} e compartilhado com você.`
+              : 'Simulado compartilhado com você.'}{' '}
           Você pode ver e editar o pacote completo (gabarito, correções e resultados).
         </p>
       ) : null}

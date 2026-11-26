@@ -74,7 +74,7 @@ type SimuladosCtx = {
 const Ctx = createContext<SimuladosCtx | null>(null);
 
 export function SimuladosProvider({ children }: { children: ReactNode }) {
-  const { user, meProf } = useAuth();
+  const { user, meProf, isSuperAdmin } = useAuth();
   const myName = meProf?.nome_completo;
   const [sims, setSims] = useState<Simulado[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,6 +142,7 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
       professorId: s.professorId,
       ownerName: s.ownerName,
       shared: s.shared,
+      adminAccess: s.adminAccess,
       sharedWith: s.sharedWith ? s.sharedWith.map((p) => ({ ...p })) : undefined,
       anul: [...s.anul],
       disc: s.disc ? [...s.disc] : undefined,
@@ -191,7 +192,7 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
     (async () => {
       setLoading(true);
       try {
-        const list = await listSimulados(user.id);
+        const list = await listSimulados(user.id, { isSuperAdmin });
         if (!alive) return;
         setSims(
           list
@@ -203,6 +204,7 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
                 professorId: s.professorId,
                 ownerName: s.ownerName,
                 shared: s.shared,
+                adminAccess: s.adminAccess,
                 sharedWith: s.sharedWith,
                 gab: s.gab || '.'.repeat(s.nq),
                 anul: s.anul || [],
@@ -225,12 +227,12 @@ export function SimuladosProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [user]);
+  }, [user, isSuperAdmin]);
 
   const cur = useCallback((id: string) => sims.find((s) => s.id === id), [sims]);
 
   const isOwner = useCallback(
-    (sim: Simulado) => Boolean(user && (sim.professorId || user.id) === user.id && !sim.shared),
+    (sim: Simulado) => Boolean(user && (sim.professorId || user.id) === user.id),
     [user],
   );
 

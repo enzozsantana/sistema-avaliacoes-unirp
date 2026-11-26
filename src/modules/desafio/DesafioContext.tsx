@@ -45,7 +45,7 @@ type DesafioCtx = {
 const Ctx = createContext<DesafioCtx | null>(null);
 
 export function DesafioProvider({ children }: { children: ReactNode }) {
-  const { user, meProf } = useAuth();
+  const { user, meProf, isSuperAdmin } = useAuth();
   const [hist, setHist] = useState<AvaliacaoRec[]>([]);
   const [used, setUsedState] = useState<number[]>(() => load<number[]>('dc_used', []));
   const [durMin, setDurMinState] = useState(() => load<number>('dc_dur', 15));
@@ -114,11 +114,14 @@ export function DesafioProvider({ children }: { children: ReactNode }) {
       setHist([]);
       return;
     }
-    const { data, error } = await sb
+    let query = sb
       .from('avaliacoes')
       .select('*,professores(nome_completo)')
-      .eq('professor_id', user.id)
       .order('created_at', { ascending: false });
+    if (!isSuperAdmin) {
+      query = query.eq('professor_id', user.id);
+    }
+    const { data, error } = await query;
     if (error) {
       console.error(error);
       toast('Erro ao carregar histórico');
@@ -133,7 +136,7 @@ export function DesafioProvider({ children }: { children: ReactNode }) {
         }),
       ),
     );
-  }, [user, profNome, toast]);
+  }, [user, profNome, toast, isSuperAdmin]);
 
   const prependHist = useCallback((rec: AvaliacaoRec) => {
     setHist((h) => [rec, ...h]);

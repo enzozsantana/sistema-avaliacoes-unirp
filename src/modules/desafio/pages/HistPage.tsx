@@ -36,7 +36,7 @@ type FeedItem =
 
 export function HistPage() {
   const nav = useNavigate();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const {
     hist,
     fetchHist,
@@ -62,7 +62,11 @@ export function HistPage() {
     void (async () => {
       setLoading(true);
       try {
-        const [, sims] = await Promise.all([fetchHist(), listSimulados()]);
+        if (!user) return;
+        const [, sims] = await Promise.all([
+          fetchHist(),
+          listSimulados(user.id, { isSuperAdmin }),
+        ]);
         setSimItems(simHistItems(sims));
       } catch (e) {
         console.error(e);
@@ -71,7 +75,7 @@ export function HistPage() {
         setLoading(false);
       }
     })();
-  }, [fetchHist, toast]);
+  }, [fetchHist, toast, user, isSuperAdmin]);
 
   const desafioList = useMemo(() => histFiltrado(hist, filtro), [hist, filtro]);
 

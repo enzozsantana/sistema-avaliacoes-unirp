@@ -15,6 +15,7 @@ export type Professor = {
   nome_completo: string;
   email: string;
   avatar_url?: string | null;
+  is_super_admin?: boolean;
 };
 
 type AuthCtx = {
@@ -22,6 +23,7 @@ type AuthCtx = {
   session: Session | null;
   user: User | null;
   meProf: Professor | null;
+  isSuperAdmin: boolean;
   refreshProf: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (nome: string, email: string, password: string) => Promise<{ error?: string; needsConfirm?: boolean }>;
@@ -52,17 +54,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const { data, error } = await sb
       .from('professores')
-      .select('id,nome_completo,email,avatar_url')
+      .select('id,nome_completo,email,avatar_url,is_super_admin')
       .eq('id', user.id)
       .maybeSingle();
     if (error) console.error(error);
     setMeProf(
-      data || {
-        id: user.id,
-        nome_completo: (user.user_metadata?.nome_completo as string) || user.email || 'Professor',
-        email: user.email || '',
-        avatar_url: (user.user_metadata?.avatar_url as string) || null,
-      },
+      data
+        ? { ...data, is_super_admin: Boolean(data.is_super_admin) }
+        : {
+            id: user.id,
+            nome_completo: (user.user_metadata?.nome_completo as string) || user.email || 'Professor',
+            email: user.email || '',
+            avatar_url: (user.user_metadata?.avatar_url as string) || null,
+            is_super_admin: false,
+          },
     );
   }, []);
 
@@ -91,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       meProf,
+      isSuperAdmin: Boolean(meProf?.is_super_admin),
       refreshProf: async () => loadMeProf(session?.user ?? null),
       signIn: async (email, password) => {
         const { error } = await sb.auth.signInWithPassword({ email, password });
