@@ -5,9 +5,12 @@ export function calc(ans: Record<string, string | undefined>): number {
   return Object.values(ans).reduce((s, v) => s + (VAL[v as keyof typeof VAL] ?? 0), 0);
 }
 
-/** Média entre prática e caderno (ambos 0–10). */
+/**
+ * Nota final (0–10): (prática ÷ 2) + (caderno ÷ 2).
+ * Ex.: prática 8 + caderno 7 → 4 + 3,5 = 7,5.
+ */
 export function calcFinal(pratica: number, caderno: number): number {
-  return (pratica + caderno) / 2;
+  return pratica / 2 + caderno / 2;
 }
 
 export function parseNotaCaderno(raw: string | number | null | undefined): number | null {

@@ -427,7 +427,7 @@ export function EvalPage() {
             onChange={(e) => setSession((s) => (s ? { ...s, notaCaderno: e.target.value } : s))}
           />
           <p className="legend" style={{ marginTop: 8 }}>
-            Nota final = (prática {fmt(notaPraticaLive)} + caderno) ÷ 2
+            Nota final = (prática {fmt(notaPraticaLive)} ÷ 2) + (caderno ÷ 2)
             {isNotaCadernoValida(cadernoLive) ? ` → ${fmt(notaLive)}` : ''}
           </p>
         </div>

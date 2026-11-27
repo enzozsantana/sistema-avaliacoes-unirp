@@ -14,7 +14,7 @@ export type AvaliacaoRec = {
   st: number;
   stNome: string;
   ans: Record<string, AnsVal | string>;
-  /** Nota final = média (prática + caderno) / 2 */
+  /** Nota final = (prática ÷ 2) + (caderno ÷ 2) */
   nota: number;
   /** Soma dos critérios da estação (0–10) */
   notaPratica: number;

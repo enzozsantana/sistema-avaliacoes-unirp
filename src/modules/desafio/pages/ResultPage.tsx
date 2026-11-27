@@ -409,7 +409,7 @@ export function ResultPage() {
                 }
               />
               <p className="legend" style={{ marginTop: 8 }}>
-                Nota final = (prática + caderno) ÷ 2
+                Nota final = (prática ÷ 2) + (caderno ÷ 2)
               </p>
             </div>
             <div className="card">
